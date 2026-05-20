@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How Well Do You Know Us? — Relationship Quiz Game</title>
+  <style>
+    :root {
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --color-background-primary: #ffffff;
+      --color-background-secondary: #f9fafb;
+      --color-text-primary: #111827;
+      --color-text-secondary: #4b5563;
+      --color-border-secondary: #e5e7eb;
+      --color-border-tertiary: #d1d5db;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: #faf5f5;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      padding: 1.5rem 1rem;
+      max-width: 560px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .card {
+      background: var(--color-background-primary);
+      border: 0.5px solid var(--color-border-tertiary);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.6rem;
+      border-radius: 10px;
+      border: 0.5px solid var(--color-border-secondary);
+      background: var(--color-background-primary);
+      color: var(--color-text-primary);
+      font-size: 15px;
+      cursor: pointer;
+      text-align: left;
+      box-sizing: border-box;
+      transition: background 0.2s;
+    }
+
+    .btn:hover {
+      background: var(--color-background-secondary) !important;
+    }
+
+    .hint-btn {
+      background: none;
+      border: none;
+      color: #a78bfa;
+      font-size: 13px;
+      cursor: pointer;
+      padding: 0.25rem 0;
+      margin-top: 0.5rem;
+    }
+
+    .progress-container {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 1rem;
+    }
+
+    .progress-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-80px); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2 class="sr-only">How Well Do You Know Us? — Relationship Quiz Game</h2>
+    
+    <div id="heart-container" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; pointer-events: none; z-index: 10;"></div>
+    <div id="achievement-popup"></div>
+    <div id="modal-container"></div>
+    <div id="main-content"></div>
+  </div>
+
+  <script>
+    // App State Configuration Variables
+    const PINK = "#f472b6";
+    const PURPLE = "#a78bfa";
+    const LIGHT_PINK = "#fce7f3";
+    const LIGHT_PURPLE = "#ede9fe";
+
+    const questions = [
+      {
+        type: "quiz",
+        question: "Where did we go on our very first date? 🌸",
+        options: ["A cozy cafe", "The beach", "A movie theatre", "A park"],
+        answer: 0,
+        hint: "Warm drinks, soft lights, and a lot of nervous energy..."
+      },
+      {
+        type: "whoSaidIt",
+        question: "Who said it first? 💬",
+        quote: "\"I think I might actually like you... like, a lot.\"",
+        options: ["You did 💅", "He did 🥺"],
+        answer: 0,
+        hint: "It was brave. Very brave. 👀"
+      },
+      {
+        type: "quiz",
+        question: "What's my go-to order when we get food? 🥤",
+        options: ["Biryani, always", "Pasta pesto", "I'll just have soft drink", "Whatever you're having"],
+        answer: 2,
+        hint: "Surprisingly not that hungry... every single time."
+      },
+      {
+        type: "guessDate",
+        question: "When did we start texting? 📱",
+        options: ["1st March", "5th March", "10th March", "15th March"],
+        answer: 1, // Corrected index pointing to "5th March"
+        hint: "The beginning of everything 🥹"
+      },
+      {
+        type: "guessDate",
+        question: "When did we have our first kiss? 💋",
+        options: ["14th May", "17th May", "19th May", "21st May"],
+        answer: 1, // Corrected index pointing to "17th May"
+        hint: "A day you should definitely remember. No pressure. 😭"
+      },
+      {
+        type: "whoSaidIt",
+        question: "Who said it? 💬",
+        quote: "\"You should pay me rent for living in my head 24/7.\"",
+        options: ["You did 💅", "He did 🥺"],
+        answer: 1,
+        hint: "Someone was feeling very poetic that day..."
+      },
+      {
+        type: "quiz",
+        question: "What's the first thing I notice when I see you? 🥺",
+        options: ["Your eyes", "Your nails", "Your ears", "All of the above... everything 😭"],
+        answer: 3,
+        hint: "It's genuinely all of it. Every single time."
+      },
+      {
+        type: "quiz",
+        question: "What's our future? 🔮",
+        options: ["Temporary relationship", "Friends with benefits", "Nothing lol", "Manjan isn't cool enough", "Husband & wife 💍"],
+        answer: 4,
+        hint: "The only correct answer. Obviously. 😌"
+      },
+      {
+        type: "quiz",
+        question: "What do I always do that annoys you (but you secretly love)? 😈",
+        options: ["Tease you", "Listen to you yap", "Flirt with you nonstop", "All of the above, honestly"],
+        answer: 3,
+        hint: "...it's definitely all of the above. Be honest."
+      },
+      {
+        type: "quiz",
+        question: "If we were a movie, what genre would it be? 🎬",
+        options: ["Romcom chaos", "Slow burn drama", "Action (you're always yelling)", "A documentary about love"],
+        answer: 3, // Corrected to point to the 4th option: "A documentary about love"
+        hint: "Chaotic, funny, somehow always working out."
+      }
+    ];
+
+    const MILESTONES = [
+      { score: 3, title: "Rookie Pookie 🏅", letter: "Okay okay, you showed up. I'll admit — getting 3 right means you at least remember some things. Here's a little secret: I think about you literally all the time. Like, embarrassingly all the time. Don't tell anyone. 🤫" },
+      { score: 7, title: "Certified Pookie 🏆", letter: "Seven out of ten? Okay you actually know me. That's kind of terrifying. In a good way. So here's the truth: you make ordinary days feel like something worth remembering. Every single one of them. 🌸" },
+      { score: 10, title: "Professional Yap Listener 👂 + Ultimate Pookie 🌟", letter: "PERFECT SCORE?! You absolute menace. You know me better than I know myself sometimes. So here it is, no jokes: I'm really, really glad you're mine. Every late night, every random memory, every dumb fight and soft moment — I'd choose all of it again. Always. 💖" }
+    ];
+
+    const ACHIEVEMENTS = [
+      { trigger: 1, label: "First Try Energy 💪", desc: "Getting things right from the start. That's a vibe." },
+      { trigger: 3, label: "Rookie Pookie 🏅", desc: "You remembered the basics. Impressive... barely." },
+      { trigger: 5, label: "Halfway There 🎯", desc: "5/10 — mathematically mediocre, emotionally valid." },
+      { trigger: 7, label: "Certified Pookie 🏆", desc: "You actually paid attention. Respect." },
+      { trigger: 9, label: "Almost Perfect (Like Me) 💅", desc: "9/10? Overachiever. I'm lowkey impressed." },
+      { trigger: 10, label: "Professional Yap Listener 👂", desc: "You listened to every single rant. You deserve this." }
+    ];
+
+    const funnyWrongLines = [
+      "Bestie... no. 💀", "I— okay. Moving on. 😭", "Are we even dating? 👀",
+      "Wrong but I still love you. Kinda.", "That's... that's not it, pookie. 😭"
+    ];
+    const funnyRightLines = [
+      "YESSS! You know me! 🥹", "Okay okay, points for you! ✨",
+      "You actually listened omg 🤯", "That's my pookie! 💖", "Correct! You're allowed to be proud 🌸"
+    ];
+
+    // Reactive State Architecture
+    let screen = "intro";
+    let current = 0;
+    let score = 0;
+    let selected = null;
+    let showHint = false;
+    let feedback = null;
+    let unlockedAchievements = [];
+    let unlockedLetters = [];
+    let allAnswers = [];
+
+    function render() {
+      const target = document.getElementById("main-content");
+      target.innerHTML = "";
+
+      if (screen === "intro") {
+        target.innerHTML = `
+          <div class="card">
+            <div style="font-size: 36px; margin-bottom: 0.5rem;">💖</div>
+            <div style="font-size: 22px; font-weight: 500; color: var(--color-text-primary); margin: 0 0 0.25rem;">How well do you know us?</div>
+            <div style="font-size: 15px; color: var(--color-text-secondary); margin: 0 0 1.5rem;">10 questions. Zero lying allowed. Unlock hidden love letters as you go. 💌</div>
+            <div style="background: ${LIGHT_PURPLE}; border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 1.25rem;">
+              <div style="font-size: 13px; color: ${PURPLE}; font-weight: 500;">Achievements to unlock</div>
+              <div style="font-size: 13px; color: var(--color-text-secondary); mt: 4px;">Certified Pookie • Professional Yap Listener • and more...</div>
+            </div>
+            <button class="btn" style="background: ${PINK}; color: #fff; border: none; text-align: center; font-weight: 500; font-size: 16px;" onclick="changeScreen('quiz')">Start the quiz 💅</button>
+          </div>
+        `;
+      } 
+      
+      else if (screen === "quiz") {
+        const q = questions[current];
+        
+        // Build Progress dots
+        let progressHtml = '<div class="progress-container">';
+        for (let i = 0; i < questions.length; i++) {
+          let dotBg = i < current ? PINK : i === current ? PURPLE : "var(--color-border-tertiary)";
+          progressHtml += `<div class="progress-dot" style="background: ${dotBg}"></div>`;
+        }
+        progressHtml += '</div>';
+
+        // Build Option buttons
+        let optionsHtml = '';
+        q.options.forEach((opt, i) => {
+          let bg = "var(--color-background-primary)";
+          let border = "0.5px solid var(--color-border-secondary)";
+          let color = "var(--color-text-primary)";
+          
+          if (selected !== null) {
+            if (i === q.answer) { bg = "#dcfce7"; border = "1px solid #86efac"; color = "#166534"; }
+            else if (i === selected && i !== q.answer) { bg = "#fee2e2"; border = "1px solid #fca5a5"; color = "#991b1b"; }
+          }
+          
+          optionsHtml += `<button class="btn" style="background: ${bg}; border: ${border}; color: ${color};" onclick="handleAnswer(${i})">${opt}</button>`;
+        });
+
+        // Hint Block Logic
+        let hintHtml = '';
+        if (selected === null) {
+          hintHtml += `<button class="hint-btn" onclick="toggleHint()">${showHint ? "Hide hint" : "Need a hint? 👀"}</button>`;
+          if (showHint) {
+            hintHtml += `<div style="font-size: 13px; color: var(--color-text-secondary); margin-top: 4px; font-style: italic;">${q.hint}</div>`;
+          }
+        }
+
+        // Feedback Text Block
+        let feedbackHtml = '';
+        if (feedback) {
+          let feedColor = selected === q.answer ? "#166534" : "#991b1b";
+          feedbackHtml += `<div style="margin-top: 0.75rem; font-size: 14px; font-weight: 500; color: ${feedColor};">${feedback}</div>`;
+        }
+
+        // Action navigation controls
+        let actionBtnHtml = '';
+        if (selected !== null) {
+          let btnText = current + 1 < questions.length ? "Next →" : "See results 🎉";
+          actionBtnHtml += `<button class="btn" style="margin-top: 1rem; background: ${PURPLE}; color: #fff; border: none; text-align: center; font-weight: 500;" onclick="nextQuestion()">${btnText}</button>`;
+        }
+
+        // Dynamically track active love letter payloads
+        let lettersHtml = '';
+        if (unlockedLetters.length > 0) {
+          lettersHtml += `<div style="margin-top: 1rem;"><div style="font-size: 14px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 0.5rem;">Unlocked love letters 💌</div>`;
+          unlockedLetters.forEach((l, idx) => {
+            lettersHtml += `
+              <div style="background: ${LIGHT_PINK}; border: 1px solid ${PINK}; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 0.75rem; cursor: pointer;" onclick="openLetterModal(${idx})">
+                <div style="font-size: 14px; font-weight: 500; color: #9d174d;">${l.title}</div>
+                <div style="font-size: 12px; color: #be185d; margin-top: 2px;">Tap to read 💌</div>
+              </div>
+            `;
+          });
+          lettersHtml += '</div>';
+        }
+
+        target.innerHTML = `
+          ${progressHtml}
+          <div style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 0.75rem;">Question ${current + 1} of ${questions.length} · Score: ${score}</div>
+          <div class="card">
+            <div style="font-size: 13px; color: ${PURPLE}; font-weight: 500; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
+              ${q.type === "whoSaidIt" ? "Who said it?" : q.type === "guessDate" ? "Guess the date" : "Question"}
+            </div>
+            <div style="font-size: 17px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 1rem; line-height: 1.5;">${q.question}</div>
+            ${q.quote ? `<div style="background: ${LIGHT_PINK}; border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 15px; color: var(--color-text-secondary); font-style: italic;">${q.quote}</div>` : ''}
+            ${optionsHtml}
+            ${hintHtml}
+            ${feedbackHtml}
+            ${actionBtnHtml}
+          </div>
+          ${lettersHtml}
+        `;
+      } 
+      
+      else if (screen === "result") {
+        let finalMilestone = [...MILESTONES].reverse().find(m => score >= m.score);
+        
+        let answersReviewHtml = '';
+        allAnswers.forEach((a, i) => {
+          answersReviewHtml += `
+            <div style="border-radius: 8px; padding: 0.6rem 0.75rem; margin-bottom: 0.5rem; background: ${a.isCorrect ? '#dcfce7' : '#fee2e2'}; border: 0.5px solid ${a.isCorrect ? '#86efac' : '#fca5a5'}">
+              <div style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 2px;">Q${i + 1}</div>
+              <div style="font-size: 13px; font-weight: 500; color: ${a.isCorrect ? '#166534' : '#991b1b'}">${a.question}</div>
+              <div style="font-size: 13px; color: ${a.isCorrect ? '#166534' : '#991b1b'}">You chose: ${a.chosen}</div>
+              ${!a.isCorrect ? `<div style="font-size: 12px; color: #166534; margin-top: 2px;">Correct: ${a.correct}</div>` : ''}
+            </div>
+          `;
+        });
+
+        let achievementsReviewHtml = '';
+        if (unlockedAchievements.length === 0) {
+          achievementsReviewHtml = `<div style="font-size: 13px; color: var(--color-text-secondary);">None this time... 😭</div>`;
+        } else {
+          unlockedAchievements.forEach(a => {
+            achievementsReviewHtml += `
+              <div style="background: ${LIGHT_PURPLE}; border-radius: 8px; padding: 0.5rem 0.75rem; margin-bottom: 0.4rem;">
+                <div style="font-size: 14px; font-weight: 500; color: ${PURPLE};">${a.label}</div>
+                <div style="font-size: 12px; color: var(--color-text-secondary);">${a.desc}</div>
+              </div>
+            `;
+          });
+        }
+
+        target.innerHTML = `
+          <div class="card">
+            <div style="font-size: 36px; margin-bottom: 0.5rem;">🎉</div>
+            <div style="font-size: 22px; font-weight: 500; color: var(--color-text-primary); margin: 0 0 0.25rem;">You scored ${score}/${questions.length}</div>
+            <div style="font-size: 15px; color: var(--color-text-secondary); margin: 0 0 1.5rem;">${finalMilestone ? finalMilestone.title : "Rookie level. But I still love you."}</div>
+            
+            ${finalMilestone ? `
+              <div style="background: ${LIGHT_PINK}; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1.25rem;">
+                <div style="font-size: 14px; font-weight: 500; color: #9d174d; margin-bottom: 0.5rem;">Love letter unlocked 💌</div>
+                <div style="font-size: 14px; color: #be185d; line-height: 1.7;">${finalMilestone.letter}</div>
+              </div>
+            ` : ''}
+
+            <div style="margin-bottom: 1.25rem;">
+              <div style="font-size: 14px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 0.75rem;">Your answers 📋</div>
+              ${answersReviewHtml}
+            </div>
+
+            <div style="margin-bottom: 1.25rem;">
+              <div style="font-size: 14px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 0.5rem;">Achievements earned 🏆</div>
+              ${achievementsReviewHtml}
+            </div>
+
+            <button class="btn" style="background: ${PINK}; color: #fff; border: none; text-align: center; font-weight: 500;" onclick="restartQuiz()">Play again 💖</button>
+          </div>
+        `;
+      }
+    }
+
+    // Interactive Controller Actions
+    function changeScreen(newScreen) {
+      screen = newScreen;
+      render();
+    }
+
+    function toggleHint() {
+      showHint = !showHint;
+      render();
+    }
+
+    function spawnHearts() {
+      const container = document.getElementById("heart-container");
+      for (let i = 0; i < 5; i++) {
+        const heart = document.createElement("span");
+        heart.innerText = "💗";
+        heart.style.position = "absolute";
+        heart.style.fontSize = "18px";
+        heart.style.animation = "floatUp 1.2s ease-out forwards";
+        heart.style.left = `${20 + Math.random() * 60}%`;
+        heart.style.bottom = "40%";
+        heart.style.animationDelay = `${i * 0.15}s`;
+        
+        container.appendChild(heart);
+        setTimeout(() => heart.remove(), 1400);
+      }
+    }
+
+    function triggerAchievementPopup(ach) {
+      const container = document.getElementById("achievement-popup");
+      container.innerHTML = `
+        <div style="position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--color-background-primary); border: 1.5px solid ${PINK}; border-radius: 12px; padding: 0.75rem 1.25rem; zIndex: 99; min-width: 240px; text-align: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">
+          <div style="font-weight: 500; color: var(--color-text-primary); font-size: 15px;">${ach.label}</div>
+          <div style="font-size: 13px; color: var(--color-text-secondary); margin-top: 4px;">${ach.desc}</div>
+        </div>
+      `;
+      setTimeout(() => { container.innerHTML = ""; }, 3000);
+    }
+
+    function handleAnswer(idx) {
+      if (selected !== null) return;
+      selected = idx;
+      
+      const q = questions[current];
+      const correct = idx === q.answer;
+      
+      feedback = correct 
+        ? funnyRightLines[Math.floor(Math.random() * funnyRightLines.length)] 
+        : funnyWrongLines[Math.floor(Math.random() * funnyWrongLines.length)];
+      
+      if (correct) {
+        score += 1;
+        spawnHearts();
+        
+        // Match standard React structural achievement triggers
+        const currentScore = score;
+        const newAch = ACHIEVEMENTS.filter(a => a.trigger === currentScore && !unlockedAchievements.find(u => u.trigger === a.trigger));
+        if (newAch.length) {
+          unlockedAchievements.push(newAch[0]);
+          setTimeout(() => { triggerAchievementPopup(newAch[0]); }, 800);
+        }
+
+        const newLetters = MILESTONES.filter(m => m.score <= currentScore && !unlockedLetters.find(l => l.score === m.score));
+        if (newLetters.length) {
+          unlockedLetters = [...unlockedLetters, ...newLetters];
+        }
+      }
+
+      allAnswers.push({
+        question: q.question,
+        chosen: q.options[idx],
+        correct: q.options[q.answer],
+        isCorrect: correct
+      });
+
+      render();
+    }
+
+    function nextQuestion() {
+      if (current + 1 < questions.length) {
+        current += 1;
+        selected = null;
+        feedback = null;
+        showHint = false;
+        render();
+      } else {
+        screen = "result";
+        render();
+      }
+    }
+
+    function openLetterModal(idx) {
+      const letter = unlockedLetters[idx];
+      const modal = document.getElementById("modal-container");
+      modal.innerHTML = `
+        <div class="modal-overlay" onclick="closeLetterModal()">
+          <div class="card" style="max-width: 420px; width: 100%; border: 1.5px solid ${PINK};" onclick="event.stopPropagation()">
+            <div style="font-size: 18px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 1rem;">${letter.title}</div>
+            <div style="font-size: 15px; color: var(--color-text-secondary); line-height: 1.7;">${letter.letter}</div>
+            <button class="btn" style="margin-top: 1.25rem; text-align: center; color: ${PINK}; border-color: ${PINK};" onclick="closeLetterModal()">Close 💌</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function closeLetterModal() {
+      document.getElementById("modal-container").innerHTML = "";
+    }
+
+    function restartQuiz() {
+      current = 0;
+      score = 0;
+      selected = null;
+      feedback = null;
+      showHint = false;
+      unlockedAchievements = [];
+      unlockedLetters = [];
+      allAnswers = [];
+      screen = "intro";
+      render();
+    }
+
+    // Core Initialization
+    render();
+  </script>
+</body>
+</html>
